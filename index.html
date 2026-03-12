@@ -1439,7 +1439,35 @@ function showSnack(msg) {
 }
 
   // Après (avec le vrai nom de ton worker) :
-const WORKER_URL = 'https://royal-waterfall-45b1.salmane-elboubakkari-seb.workers.dev';  
+const WORKER_URL = 'https://royal-waterfall-45b1.salmane-elboubakkari-seb.workers.dev';
+
+async function track(event, details = {}) {
+  try {
+    await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event, ...details }),
+    });
+  } catch {}
+}
+
+function getBrowser() {
+  const ua = navigator.userAgent;
+  if (ua.includes('Chrome')) return 'Chrome';
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Safari')) return 'Safari';
+  if (ua.includes('Edge')) return 'Edge';
+  return 'Autre';
+}
+
+window.addEventListener('load', () => {
+  track('visit', {
+    screen: `${screen.width}×${screen.height}`,
+    browser: getBrowser(),
+    mobile: /Mobi|Android/i.test(navigator.userAgent),
+    country: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+}); 
 </script>
 </body>
 </html>
