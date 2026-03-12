@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUT Studio — Créateur de LUT</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Unbounded:wght@300;400;600;700&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --panel: #111114;
+    --panel2: #18181d;
+    --border: #2a2a35;
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --accent3: #47c8ff;
+    --text: #e8e8f0;
+    --muted: #6a6a80;
+    --red: #ff4757;
+    --green: #2ed573;
+    --blue: #1e90ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+  }
+  .logo span { color: var(--text); font-weight: 300; }
+
+  .header-actions { display: flex; gap: 12px; align-items: center; }
+
+  .btn {
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0b;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #d4eb30; transform: translateY(-1px); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #ff2f45; }
+
+  /* LAYOUT */
+  .app {
+    display: grid;
+    grid-template-columns: 320px 1fr 300px;
+    height: calc(100vh - 57px);
+  }
+
+  /* PANELS */
+  .panel {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    background: var(--panel);
+  }
+  .panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--panel2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* SLIDERS */
+  .slider-group { margin-bottom: 12px; }
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .slider-name {
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .slider-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+  input[type=range].red::-webkit-slider-thumb { background: var(--red); }
+  input[type=range].green::-webkit-slider-thumb { background: var(--green); }
+  input[type=range].blue::-webkit-slider-thumb { background: var(--blue); }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    background: #050506;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .preview-container {
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #000;
+  }
+
+  .preview-label {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(0,0,0,0.7);
+    color: var(--muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+    backdrop-filter: blur(4px);
+  }
+
+  .split-preview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    width: 100%;
+    max-width: 680px;
+  }
+
+  .split-preview > div {
+    position: relative;
+    border-radius: 0;
+  }
+
+  .split-preview > div:first-child {
+    border-radius: 8px 0 0 8px;
+    overflow: hidden;
+  }
+  .split-preview > div:last-child {
+    border-radius: 0 8px 8px 0;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  #upload-zone {
+    width: 100%;
+    max-width: 680px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 60px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #upload-zone:hover, #upload-zone.drag { border-color: var(--accent); background: rgba(232,255,71,0.03); }
+  #upload-zone .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  #upload-zone h3 { font-family: 'Unbounded', sans-serif; font-size: 0.9rem; font-weight: 400; margin-bottom: 8px; }
+  #upload-zone p { color: var(--muted); font-size: 0.8rem; }
+
+  /* CURVES */
+  .curve-canvas-wrap {
+    position: relative;
+    background: #0d0d10;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  #curveCanvas {
+    display: block;
+    cursor: crosshair;
+  }
+
+  .curve-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .curve-tab {
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .curve-tab.active-rgb { background: rgba(255,255,255,0.1); color: #fff; border-color: #fff; }
+  .curve-tab.active-r { background: rgba(255,71,87,0.2); color: var(--red); border-color: var(--red); }
+  .curve-tab.active-g { background: rgba(46,213,115,0.2); color: var(--green); border-color: var(--green); }
+  .curve-tab.active-b { background: rgba(30,144,255,0.2); color: var(--blue); border-color: var(--blue); }
+
+  /* COLOR WHEELS */
+  .wheels-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .wheel-wrap { text-align: center; }
+  .wheel-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  canvas.wheel { cursor: crosshair; border-radius: 50%; }
+
+  /* PRESETS */
+  .presets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .preset-btn {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .preset-name { font-weight: 500; }
+  .preset-desc { color: var(--muted); font-size: 0.6rem; margin-top: 2px; }
+
+  /* LUT INFO */
+  .lut-info {
+    background: var(--panel2);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .lut-info strong { color: var(--text); }
+
+  /* EXPORT OPTIONS */
+  .export-format {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .format-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .format-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+
+  /* HISTOGRAM */
+  #histCanvas { display: block; width: 100%; border-radius: 4px; }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .toggle {
+    width: 36px;
+    height: 18px;
+    background: var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    border: none;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--muted);
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: all 0.2s;
+  }
+  .toggle.on { background: rgba(232,255,71,0.2); }
+  .toggle.on::after { background: var(--accent); left: 21px; }
+
+  /* TAG */
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    background: rgba(232,255,71,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(232,255,71,0.2);
+  }
+
+  /* SEPARATOR */
+  .sep { height: 1px; background: var(--border); margin: 0; }
+
+  /* INTENSITY */
+  .intensity-bar {
+    height: 3px;
+    background: linear-gradient(90deg, var(--panel2), var(--accent));
+    border-radius: 2px;
+    margin-top: 4px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* SNACKBAR */
+  #snackbar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    z-index: 999;
+    transition: transform 0.3s cubic-bezier(.175,.885,.32,1.275);
+  }
+  #snackbar.show { transform: translateX(-50%) translateY(0); }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 6px;
+    box-shadow: 0 0 6px var(--green);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LUT<span>Studio</span></div>
+  <div class="header-actions">
+    <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">
+      <span class="status-dot"></span>32×32×32
+    </span>
+    <button class="btn btn-ghost" onclick="resetAll()">Réinitialiser</button>
+    <button class="btn btn-primary" onclick="exportLUT()">⬇ Exporter LUT</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- LEFT PANEL: Controls -->
+  <div class="panel">
+    <div class="panel-header">Ajustements <span class="tag">Global</span></div>
+
+    <!-- Exposure & Basic -->
+    <div class="section">
+      <div class="section-title">Exposition & Contraste</div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Exposition</span>
+          <span class="slider-value" id="val-exposure">0.00</span>
+        </div>
+        <input type="range" id="exposure" min="-2" max="2" step="0.01" value="0" oninput="updateVal('exposure');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Contraste</span>
+          <span class="slider-value" id="val-contrast">0</span>
+        </div>
+        <input type="range" id="contrast" min="-100" max="100" step="1" value="0" oninput="updateVal('contrast');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Hautes lumières</span>
+          <span class="slider-value" id="val-highlights">0</span>
+        </div>
+        <input type="range" id="highlights" min="-100" max="100" step="1" value="0" oninput="updateVal('highlights');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Ombres</span>
+          <span class="slider-value" id="val-shadows">0</span>
+        </div>
+        <input type="range" id="shadows" min="-100" max="100" step="1" value="0" oninput="updateVal('shadows');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Noirs</span>
+          <span class="slider-value" id="val-blacks">0</span>
+        </div>
+        <input type="range" id="blacks" min="-100" max="100" step="1" value="0" oninput="updateVal('blacks');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Blancs</span>
+          <span class="slider-value" id="val-whites">0</span>
+        </div>
+        <input type="range" id="whites" min="-100" max="100" step="1" value="0" oninput="updateVal('whites');applyLUT()">
+      </div>
+    </div>
+
+    <!-- Color -->
+    <div class="section">
+      <div class="section-title">Couleur</div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Température</span>
+          <span class="slider-value" id="val-temp">0</span>
+        </div>
+        <input type="range" id="temp" min="-100" max="100" step="1" value="0" oninput="updateVal('temp');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Teinte</span>
+          <span class="slider-value" id="val-tint">0</span>
+        </div>
+        <input type="range" id="tint" min="-100" max="100" step="1" value="0" oninput="updateVal('tint');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Saturation</span>
+          <span class="slider-value" id="val-saturation">0</span>
+        </div>
+        <input type="range" id="saturation" min="-100" max="100" step="1" value="0" oninput="updateVal('saturation');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Vibrance</span>
+          <span class="slider-value" id="val-vibrance">0</span>
+        </div>
+        <input type="range" id="vibrance" min="-100" max="100" step="1" value="0" oninput="updateVal('vibrance');applyLUT()">
+      </div>
+    </div>
+
+    <!-- RGB Channels -->
+    <div class="section">
+      <div class="section-title">Canaux RGB</div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name" style="color:var(--red)">Rouge</span>
+          <span class="slider-value" id="val-red">0</span>
+        </div>
+        <input type="range" class="red" id="red" min="-100" max="100" step="1" value="0" oninput="updateVal('red');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name" style="color:var(--green)">Vert</span>
+          <span class="slider-value" id="val-green">0</span>
+        </div>
+        <input type="range" class="green" id="green" min="-100" max="100" step="1" value="0" oninput="updateVal('green');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name" style="color:var(--blue)">Bleu</span>
+          <span class="slider-value" id="val-blue">0</span>
+        </div>
+        <input type="range" class="blue" id="blue" min="-100" max="100" step="1" value="0" oninput="updateVal('blue');applyLUT()">
+      </div>
+    </div>
+
+    <!-- Split Toning -->
+    <div class="section">
+      <div class="section-title">Virage partiel</div>
+
+      <div style="margin-bottom:8px;font-size:0.72rem;color:var(--muted)">Hautes lumières</div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Teinte HL</span>
+          <span class="slider-value" id="val-hlhue">0</span>
+        </div>
+        <input type="range" id="hlhue" min="0" max="360" step="1" value="0" oninput="updateVal('hlhue');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Saturation HL</span>
+          <span class="slider-value" id="val-hlsat">0</span>
+        </div>
+        <input type="range" id="hlsat" min="0" max="100" step="1" value="0" oninput="updateVal('hlsat');applyLUT()">
+      </div>
+
+      <div style="margin-bottom:8px;margin-top:8px;font-size:0.72rem;color:var(--muted)">Ombres</div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Teinte Ombres</span>
+          <span class="slider-value" id="val-shhue">220</span>
+        </div>
+        <input type="range" id="shhue" min="0" max="360" step="1" value="220" oninput="updateVal('shhue');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Saturation Ombres</span>
+          <span class="slider-value" id="val-shsat">0</span>
+        </div>
+        <input type="range" id="shsat" min="0" max="100" step="1" value="0" oninput="updateVal('shsat');applyLUT()">
+      </div>
+    </div>
+
+    <!-- Lift Gamma Gain -->
+    <div class="section">
+      <div class="section-title">Lift / Gamma / Gain</div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Lift (noirs)</span>
+          <span class="slider-value" id="val-lift">0</span>
+        </div>
+        <input type="range" id="lift" min="-50" max="50" step="1" value="0" oninput="updateVal('lift');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Gamma (mids)</span>
+          <span class="slider-value" id="val-gamma">1.00</span>
+        </div>
+        <input type="range" id="gamma" min="0.1" max="3" step="0.01" value="1" oninput="updateVal('gamma');applyLUT()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span class="slider-name">Gain (blancs)</span>
+          <span class="slider-value" id="val-gain">1.00</span>
+        </div>
+        <input type="range" id="gain" min="0.5" max="2" step="0.01" value="1" oninput="updateVal('gain');applyLUT()">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER: Canvas -->
+  <div class="canvas-area">
+
+    <div id="upload-zone" onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="upload-icon">🎞</div>
+      <h3>Déposez une image pour prévisualiser</h3>
+      <p>PNG, JPG, WEBP · ou cliquez pour parcourir</p>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="loadImage(event)">
+    </div>
+
+    <div id="preview-section" style="display:none;width:100%;max-width:680px">
+      <div class="split-preview">
+        <div>
+          <canvas id="canvasOrig"></canvas>
+          <div class="preview-label">ORIGINAL</div>
+        </div>
+        <div>
+          <canvas id="canvasLUT"></canvas>
+          <div class="preview-label">AVEC LUT</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="section-title" style="margin-bottom:8px">Courbes — <span id="curveChannelLabel">RGB</span></div>
+        <div class="curve-tabs">
+          <button class="curve-tab active-rgb" onclick="setCurveChannel('rgb',this)">RGB</button>
+          <button class="curve-tab" onclick="setCurveChannel('r',this)">R</button>
+          <button class="curve-tab" onclick="setCurveChannel('g',this)">G</button>
+          <button class="curve-tab" onclick="setCurveChannel('b',this)">B</button>
+        </div>
+        <div class="curve-canvas-wrap">
+          <canvas id="curveCanvas" width="280" height="180"></canvas>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:6px">
+          <button class="btn btn-ghost" onclick="resetCurve()" style="padding:4px 10px;font-size:0.6rem">Reset courbe</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Histogram -->
+    <div id="hist-section" style="display:none;width:100%;max-width:680px">
+      <div class="section-title" style="margin-bottom:8px">Histogramme</div>
+      <canvas id="histCanvas" height="80"></canvas>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel" style="border-left:1px solid var(--border)">
+    <div class="panel-header">Presets & Export</div>
+
+    <!-- Presets -->
+    <div class="section">
+      <div class="section-title">Presets cinéma</div>
+      <div class="presets-grid">
+        <button class="preset-btn" onclick="applyPreset('teal-orange')">
+          <div class="preset-name">Teal & Orange</div>
+          <div class="preset-desc">Blockbuster US</div>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('fade')">
+          <div class="preset-name">Film Fade</div>
+          <div class="preset-desc">Lift doux</div>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('noir')">
+          <div class="preset-name">Noir & Blanc</div>
+          <div class="preset-desc">Désaturé</div>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('warm')">
+          <div class="preset-name">Golden Hour</div>
+          <div class="preset-desc">Chaud & doux</div>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('cold')">
+          <div class="preset-name">Arctic</div>
+          <div class="preset-desc">Froid & bleuté</div>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('vintage')">
+          <div class="preset-name">Vintage</div>
+          <div class="preset-desc">Kodak Portra</div>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('matrix')">
+          <div class="preset-name">Matrix</div>
+          <div class="preset-desc">Green grade</div>
+        </button>
+        <button class="preset-btn" onclick="applyPreset('bleach')">
+          <div class="preset-name">Bleach</div>
+          <div class="preset-desc">Bypass chimique</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- LUT Settings -->
+    <div class="section">
+      <div class="section-title">Paramètres LUT</div>
+
+      <div class="toggle-row">
+        <span style="font-size:0.8rem">Taille de la LUT</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--accent)" id="lut-size-label">32</span>
+      </div>
+      <input type="range" id="lut-size" min="0" max="2" step="1" value="1" oninput="updateLUTSize()">
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:4px">
+        <span>17</span><span>32</span><span>64</span>
+      </div>
+
+      <div style="margin-top:14px" class="toggle-row">
+        <span style="font-size:0.8rem">Intensité</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--accent)" id="val-intensity">100%</span>
+      </div>
+      <input type="range" id="intensity" min="0" max="100" step="1" value="100" oninput="updateIntensity()">
+    </div>
+
+    <!-- Export Format -->
+    <div class="section">
+      <div class="section-title">Format d'export</div>
+      <div class="export-format">
+        <button class="format-btn active" onclick="setFormat('.cube',this)">.cube</button>
+        <button class="format-btn" onclick="setFormat('.3dl',this)">.3dl</button>
+        <button class="format-btn" onclick="setFormat('.png',this)">PNG</button>
+      </div>
+      <div class="lut-info">
+        <div><strong>Format :</strong> .cube (Resolve, Premiere, FCPX)</div>
+        <div><strong>Taille :</strong> <span id="info-size">32×32×32 = 32 768 pts</span></div>
+        <div><strong>Intensité :</strong> <span id="info-intensity">100%</span></div>
+        <div><strong>Statut :</strong> <span style="color:var(--green)">✓ Prêt</span></div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="section">
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:0.8rem" onclick="exportLUT()">
+        ⬇ Exporter la LUT
+      </button>
+      <div style="margin-top:8px">
+        <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="copyLUTToClipboard()">
+          📋 Copier (texte)
+        </button>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="section">
+      <div class="section-title">À propos des LUT</div>
+      <p style="font-size:0.75rem;color:var(--muted);line-height:1.7">
+        Une <strong style="color:var(--text)">Look-Up Table</strong> mappe les valeurs RGB d'entrée vers des valeurs de sortie. Compatible avec DaVinci Resolve, Premiere Pro, Final Cut Pro X et Lightroom.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<div id="snackbar"></div>
+
+<script>
+// =====================================================
+// STATE
+// =====================================================
+let sourceImage = null;
+let lutSize = 32;
+let exportFormat = '.cube';
+let intensity = 1.0;
+
+// Curves: points per channel [x,y] normalized 0-1
+let curves = {
+  rgb: [[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+  r:   [[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+  g:   [[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+  b:   [[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+};
+let curveChannel = 'rgb';
+let draggingPoint = null;
+
+const params = () => ({
+  exposure:   +document.getElementById('exposure').value,
+  contrast:   +document.getElementById('contrast').value,
+  highlights: +document.getElementById('highlights').value,
+  shadows:    +document.getElementById('shadows').value,
+  blacks:     +document.getElementById('blacks').value,
+  whites:     +document.getElementById('whites').value,
+  temp:       +document.getElementById('temp').value,
+  tint:       +document.getElementById('tint').value,
+  saturation: +document.getElementById('saturation').value,
+  vibrance:   +document.getElementById('vibrance').value,
+  red:        +document.getElementById('red').value,
+  green:      +document.getElementById('green').value,
+  blue:       +document.getElementById('blue').value,
+  hlhue:      +document.getElementById('hlhue').value,
+  hlsat:      +document.getElementById('hlsat').value,
+  shhue:      +document.getElementById('shhue').value,
+  shsat:      +document.getElementById('shsat').value,
+  lift:       +document.getElementById('lift').value,
+  gamma:      +document.getElementById('gamma').value,
+  gain:       +document.getElementById('gain').value,
+});
+
+// =====================================================
+// UPDATE UI LABELS
+// =====================================================
+function updateVal(id) {
+  const el = document.getElementById(id);
+  const v = parseFloat(el.value);
+  const label = document.getElementById('val-' + id);
+  if (id === 'exposure' || id === 'gamma' || id === 'gain') {
+    label.textContent = v.toFixed(2);
+  } else {
+    label.textContent = Math.round(v);
+  }
+}
+
+function updateLUTSize() {
+  const v = +document.getElementById('lut-size').value;
+  lutSize = [17, 32, 64][v];
+  document.getElementById('lut-size-label').textContent = lutSize;
+  const pts = lutSize * lutSize * lutSize;
+  document.getElementById('info-size').textContent = `${lutSize}×${lutSize}×${lutSize} = ${pts.toLocaleString()} pts`;
+}
+
+function updateIntensity() {
+  intensity = document.getElementById('intensity').value / 100;
+  document.getElementById('val-intensity').textContent = Math.round(intensity * 100) + '%';
+  document.getElementById('info-intensity').textContent = Math.round(intensity * 100) + '%';
+  applyLUT();
+}
+
+function setFormat(fmt, btn) {
+  exportFormat = fmt;
+  document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('.lut-info div:first-child strong').nextSibling.textContent = '';
+  const fmtNames = { '.cube': '.cube (Resolve, Premiere, FCPX)', '.3dl': '.3dl (Autodesk, Flame)', '.png': 'PNG HALD (imagemagick)' };
+  document.querySelector('.lut-info').children[0].innerHTML = `<strong>Format :</strong> ${fmtNames[fmt]}`;
+}
+
+// =====================================================
+// IMAGE LOADING
+// =====================================================
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadFile(file);
+}
+
+function loadImage(e) {
+  loadFile(e.target.files[0]);
+}
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      setupCanvases();
+      document.getElementById('upload-zone').style.display = 'none';
+      document.getElementById('preview-section').style.display = 'block';
+      document.getElementById('hist-section').style.display = 'block';
+      applyLUT();
+      drawCurveEditor();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setupCanvases() {
+  const maxW = 340;
+  const ratio = sourceImage.height / sourceImage.width;
+  const w = Math.min(maxW, sourceImage.width);
+  const h = Math.round(w * ratio);
+
+  ['canvasOrig', 'canvasLUT'].forEach(id => {
+    const c = document.getElementById(id);
+    c.width = w; c.height = h;
+    c.style.width = '100%'; c.style.height = 'auto';
+  });
+
+  const ctxO = document.getElementById('canvasOrig').getContext('2d');
+  ctxO.drawImage(sourceImage, 0, 0, w, h);
+}
+
+// =====================================================
+// COLOR TRANSFORMS
+// =====================================================
+function clamp(v, lo=0, hi=255) { return Math.max(lo, Math.min(hi, v)); }
+
+function rgb2hsl(r,g,b) {
+  r/=255;g/=255;b/=255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if(max===min){h=s=0;}
+  else{
+    const d=max-min;
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){
+      case r:h=(g-b)/d+(g<b?6:0);break;
+      case g:h=(b-r)/d+2;break;
+      case b:h=(r-g)/d+4;break;
+    }
+    h/=6;
+  }
+  return[h,s,l];
+}
+
+function hsl2rgb(h,s,l) {
+  let r,g,b;
+  if(s===0){r=g=b=l;}
+  else{
+    const hue2rgb=(p,q,t)=>{
+      if(t<0)t+=1;if(t>1)t-=1;
+      if(t<1/6)return p+(q-p)*6*t;
+      if(t<1/2)return q;
+      if(t<2/3)return p+(q-p)*(2/3-t)*6;
+      return p;
+    };
+    const q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;
+    r=hue2rgb(p,q,h+1/3);
+    g=hue2rgb(p,q,h);
+    b=hue2rgb(p,q,h-1/3);
+  }
+  return[Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+}
+
+// Cubic spline interpolation on curve points
+function buildCurveLUT(points) {
+  const lut = new Float32Array(256);
+  for(let i=0;i<256;i++){
+    const x=i/255;
+    lut[i]=catmullRom(points,x)*255;
+  }
+  return lut;
+}
+
+function catmullRom(pts, x) {
+  if(x<=pts[0][0]) return pts[0][1];
+  if(x>=pts[pts.length-1][0]) return pts[pts.length-1][1];
+  for(let i=0;i<pts.length-1;i++){
+    if(x>=pts[i][0]&&x<=pts[i+1][0]){
+      const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(pts.length-1,i+2)];
+      const t=(x-p1[0])/(p2[0]-p1[0]);
+      const t2=t*t,t3=t2*t;
+      return 0.5*(
+        (2*p1[1])
+        +(-p0[1]+p2[1])*t
+        +(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2
+        +(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3
+      );
+    }
+  }
+  return x;
+}
+
+// Main pixel transform
+function transformPixel(r, g, b, p, curveLUTs) {
+  // Exposure
+  const expFactor = Math.pow(2, p.exposure);
+  r*=expFactor; g*=expFactor; b*=expFactor;
+
+  // Contrast
+  const cf = (p.contrast/100)*127;
+  r = (r-128)*(1+p.contrast/100)+128;
+  g = (g-128)*(1+p.contrast/100)+128;
+  b = (b-128)*(1+p.contrast/100)+128;
+
+  // Highlights / Shadows
+  const lum = (r*0.299+g*0.587+b*0.114)/255;
+  const hlMask = Math.max(0,(lum-0.5)*2);
+  const shMask = Math.max(0,(0.5-lum)*2);
+  const hlAdj = (p.highlights/100)*50;
+  const shAdj = (p.shadows/100)*50;
+  r+=hlAdj*hlMask+shAdj*shMask;
+  g+=hlAdj*hlMask+shAdj*shMask;
+  b+=hlAdj*hlMask+shAdj*shMask;
+
+  // Blacks & Whites
+  const bkFactor = 1+p.blacks/100;
+  const wFactor = 1+p.whites/200;
+  const darks = Math.max(0,(1-lum*2));
+  const lights = Math.max(0,(lum*2-1));
+  r = r*bkFactor*darks + r*wFactor*lights + r*(1-darks-lights);
+  g = g*bkFactor*darks + g*wFactor*lights + g*(1-darks-lights);
+  b = b*bkFactor*darks + b*wFactor*lights + b*(1-darks-lights);
+
+  // Temperature & Tint
+  r += p.temp * 1.2;
+  b -= p.temp * 1.2;
+  g += p.tint * 0.8;
+
+  // RGB channels
+  r += p.red*1.5;
+  g += p.green*1.5;
+  b += p.blue*1.5;
+
+  // Lift/Gamma/Gain
+  r = (r/255+p.lift/255)*p.gain;
+  g = (g/255+p.lift/255)*p.gain;
+  b = (b/255+p.lift/255)*p.gain;
+  r = Math.pow(Math.max(0,r), 1/p.gamma)*255;
+  g = Math.pow(Math.max(0,g), 1/p.gamma)*255;
+  b = Math.pow(Math.max(0,b), 1/p.gamma)*255;
+
+  // Saturation
+  const [h,s,l2] = rgb2hsl(clamp(r),clamp(g),clamp(b));
+  const newS = Math.max(0,Math.min(1, s*(1+p.saturation/100)));
+  // Vibrance: apply less to already saturated colors
+  const vibAdj = (p.vibrance/100) * (1-s);
+  const finalS = Math.max(0,Math.min(1, newS + vibAdj*0.5));
+  [r,g,b] = hsl2rgb(h, finalS, l2);
+
+  // Split toning
+  const l3 = (r*0.299+g*0.587+b*0.114)/255;
+  if(p.hlsat>0 && l3>0.5) {
+    const hlH = p.hlhue/360;
+    const hlSatN = p.hlsat/100;
+    const mix = (l3-0.5)*2;
+    const [rh,gh,bh] = hsl2rgb(hlH, hlSatN, l3);
+    r = r*(1-mix*0.5)+rh*(mix*0.5);
+    g = g*(1-mix*0.5)+gh*(mix*0.5);
+    b = b*(1-mix*0.5)+bh*(mix*0.5);
+  }
+  if(p.shsat>0 && l3<0.5) {
+    const shH = p.shhue/360;
+    const shSatN = p.shsat/100;
+    const mix = (0.5-l3)*2;
+    const [rs,gs,bs] = hsl2rgb(shH, shSatN, l3);
+    r = r*(1-mix*0.5)+rs*(mix*0.5);
+    g = g*(1-mix*0.5)+gs*(mix*0.5);
+    b = b*(1-mix*0.5)+bs*(mix*0.5);
+  }
+
+  // Curves
+  r = clamp(Math.round(r));
+  g = clamp(Math.round(g));
+  b = clamp(Math.round(b));
+  r = clamp(curveLUTs.rgb[r]);
+  g = clamp(curveLUTs.rgb[g]);
+  b = clamp(curveLUTs.rgb[b]);
+  r = clamp(curveLUTs.r[r]);
+  g = clamp(curveLUTs.g[g]);
+  b = clamp(curveLUTs.b[b]);
+
+  return [clamp(r), clamp(g), clamp(b)];
+}
+
+// =====================================================
+// APPLY LUT TO PREVIEW
+// =====================================================
+function applyLUT() {
+  if(!sourceImage) return;
+  const p = params();
+  const curveLUTs = {
+    rgb: buildCurveLUT(curves.rgb),
+    r:   buildCurveLUT(curves.r),
+    g:   buildCurveLUT(curves.g),
+    b:   buildCurveLUT(curves.b),
+  };
+
+  const cOrig = document.getElementById('canvasOrig');
+  const cLUT  = document.getElementById('canvasLUT');
+  const ctxO = cOrig.getContext('2d');
+  const ctxL = cLUT.getContext('2d');
+
+  ctxO.drawImage(sourceImage, 0, 0, cOrig.width, cOrig.height);
+  const imgData = ctxO.getImageData(0,0,cOrig.width,cOrig.height);
+  const data = imgData.data;
+  const outData = ctxL.createImageData(cOrig.width, cOrig.height);
+  const out = outData.data;
+
+  for(let i=0;i<data.length;i+=4) {
+    const [r,g,b] = transformPixel(data[i],data[i+1],data[i+2], p, curveLUTs);
+    // Blend with intensity
+    out[i]   = Math.round(data[i]*(1-intensity) + r*intensity);
+    out[i+1] = Math.round(data[i+1]*(1-intensity) + g*intensity);
+    out[i+2] = Math.round(data[i+2]*(1-intensity) + b*intensity);
+    out[i+3] = data[i+3];
+  }
+
+  ctxL.putImageData(outData, 0, 0);
+  drawHistogram(outData);
+}
+
+// =====================================================
+// HISTOGRAM
+// =====================================================
+function drawHistogram(imgData) {
+  const canvas = document.getElementById('histCanvas');
+  const w = canvas.parentElement.offsetWidth;
+  canvas.width = w; canvas.height = 80;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,w,80);
+
+  const data = imgData.data;
+  const bins = {r:new Array(256).fill(0),g:new Array(256).fill(0),b:new Array(256).fill(0)};
+  for(let i=0;i<data.length;i+=4){
+    bins.r[data[i]]++;
+    bins.g[data[i+1]]++;
+    bins.b[data[i+2]]++;
+  }
+
+  const maxVal = Math.max(...bins.r,...bins.g,...bins.b);
+  const channels = [{d:bins.r,c:'rgba(255,71,87,0.5)'},{d:bins.g,c:'rgba(46,213,115,0.5)'},{d:bins.b,c:'rgba(30,144,255,0.5)'}];
+
+  channels.forEach(({d,c})=>{
+    ctx.beginPath();
+    ctx.moveTo(0,80);
+    for(let i=0;i<256;i++){
+      const x=(i/255)*w;
+      const y=80-(d[i]/maxVal)*75;
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(w,80);
+    ctx.closePath();
+    ctx.fillStyle=c;
+    ctx.fill();
+  });
+}
+
+// =====================================================
+// CURVE EDITOR
+// =====================================================
+function drawCurveEditor() {
+  const canvas = document.getElementById('curveCanvas');
+  const W=280,H=180;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  // Background grid
+  ctx.fillStyle='#0d0d10';
+  ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#1e1e28';
+  ctx.lineWidth=1;
+  for(let i=1;i<4;i++){
+    ctx.beginPath();ctx.moveTo(W*i/4,0);ctx.lineTo(W*i/4,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke();
+  }
+
+  // Diagonal reference
+  ctx.strokeStyle='#2a2a3a';
+  ctx.beginPath();ctx.moveTo(0,H);ctx.lineTo(W,0);ctx.stroke();
+
+  // Curve
+  const pts = curves[curveChannel];
+  const colors = {rgb:'#ffffff',r:'#ff4757',g:'#2ed573',b:'#1e90ff'};
+  ctx.strokeStyle=colors[curveChannel];
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  for(let i=0;i<W;i++){
+    const x=i/W;
+    const y=1-catmullRom(pts,x);
+    if(i===0)ctx.moveTo(i,y*H);
+    else ctx.lineTo(i,y*H);
+  }
+  ctx.stroke();
+
+  // Control points
+  pts.forEach((p,i)=>{
+    ctx.beginPath();
+    ctx.arc(p[0]*W,(1-p[1])*H,6,0,Math.PI*2);
+    ctx.fillStyle=i===draggingPoint?colors[curveChannel]:'#1a1a24';
+    ctx.strokeStyle=colors[curveChannel];
+    ctx.lineWidth=2;
+    ctx.fill();ctx.stroke();
+  });
+}
+
+function setCurveChannel(ch, btn) {
+  curveChannel=ch;
+  document.querySelectorAll('.curve-tab').forEach(b=>{
+    b.className='curve-tab';
+  });
+  btn.classList.add('active-'+ch);
+  document.getElementById('curveChannelLabel').textContent=ch.toUpperCase();
+  drawCurveEditor();
+}
+
+function resetCurve() {
+  curves[curveChannel]=[[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]];
+  drawCurveEditor();
+  applyLUT();
+}
+
+// Curve mouse interaction
+document.addEventListener('DOMContentLoaded',()=>{
+  const canvas = document.getElementById('curveCanvas');
+  const getPos = e => {
+    const r=canvas.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/r.width,y:1-(e.clientY-r.top)/r.height};
+  };
+  canvas.addEventListener('mousedown',e=>{
+    const {x,y}=getPos(e);
+    const pts=curves[curveChannel];
+    let hit=-1;
+    pts.forEach((p,i)=>{
+      if(Math.abs(p[0]-x)<0.05&&Math.abs(p[1]-y)<0.08)hit=i;
+    });
+    if(hit>=0){draggingPoint=hit;}
+    else{
+      pts.push([x,y]);
+      pts.sort((a,b)=>a[0]-b[0]);
+      draggingPoint=pts.findIndex(p=>p[0]===x&&p[1]===y);
+      drawCurveEditor();applyLUT();
+    }
+  });
+  canvas.addEventListener('mousemove',e=>{
+    if(draggingPoint===null)return;
+    const {x,y}=getPos(e);
+    const pts=curves[curveChannel];
+    pts[draggingPoint]=[Math.max(0,Math.min(1,x)),Math.max(0,Math.min(1,y))];
+    pts.sort((a,b)=>a[0]-b[0]);
+    drawCurveEditor();applyLUT();
+  });
+  canvas.addEventListener('mouseup',()=>{draggingPoint=null;});
+  canvas.addEventListener('dblclick',e=>{
+    const{x,y}=getPos(e);
+    const pts=curves[curveChannel];
+    const idx=pts.findIndex(p=>Math.abs(p[0]-x)<0.05&&Math.abs(p[1]-y)<0.08);
+    if(idx>0&&idx<pts.length-1){pts.splice(idx,1);drawCurveEditor();applyLUT();}
+  });
+  drawCurveEditor();
+});
+
+// =====================================================
+// PRESETS
+// =====================================================
+const presets = {
+  'teal-orange': {
+    temp:20,saturation:15,red:20,green:-5,blue:-20,
+    hlhue:30,hlsat:25,shhue:195,shsat:35,contrast:10,
+    curves:{rgb:[[0,0],[0.25,0.24],[0.5,0.51],[0.75,0.76],[1,1]]}
+  },
+  'fade': {
+    lift:15,contrast:-10,saturation:-5,highlights:-10,shadows:10,
+    curves:{rgb:[[0,0.06],[0.5,0.5],[1,0.94]]}
+  },
+  'noir': {saturation:-100,contrast:20,highlights:-10,shadows:10},
+  'warm': {temp:40,tint:10,saturation:10,shadows:5,hlhue:35,hlsat:15,gain:1.05},
+  'cold': {temp:-30,tint:-10,saturation:5,blue:10,shhue:210,shsat:20},
+  'vintage': {
+    temp:15,saturation:-15,contrast:-5,lift:10,fade:10,
+    hlhue:40,hlsat:20,shhue:210,shsat:15,
+    curves:{rgb:[[0,0.05],[0.5,0.48],[1,0.9]],r:[[0,0],[0.5,0.52],[1,1]]}
+  },
+  'matrix': {saturation:-80,green:60,red:-20,blue:-20,contrast:15},
+  'bleach': {saturation:-40,contrast:30,highlights:20,shadows:-10,lift:5},
+};
+
+function applyPreset(name) {
+  const p = presets[name];
+  if(!p) return;
+
+  // Reset
+  resetAll(false);
+
+  // Apply
+  Object.entries(p).forEach(([k,v])=>{
+    if(k==='curves') {
+      Object.entries(v).forEach(([ch,pts])=>{
+        curves[ch]=pts.map(p=>[...p]);
+      });
+    } else {
+      const el=document.getElementById(k);
+      if(el){el.value=v;updateVal(k);}
+    }
+  });
+
+  applyLUT();
+  drawCurveEditor();
+  showSnack(`Preset "${name}" appliqué ✓`);
+}
+
+// =====================================================
+// RESET
+// =====================================================
+function resetAll(notify=true) {
+  ['exposure','contrast','highlights','shadows','blacks','whites',
+   'temp','tint','saturation','vibrance','red','green','blue',
+   'hlhue','hlsat','shhue','shsat','lift','intensity'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.value=el.defaultValue;updateVal(id);}
+  });
+  document.getElementById('gamma').value=1;updateVal('gamma');
+  document.getElementById('gain').value=1;updateVal('gain');
+  curves={
+    rgb:[[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+    r:[[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+    g:[[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+    b:[[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]],
+  };
+  intensity=1;
+  document.getElementById('intensity').value=100;
+  updateIntensity();
+  drawCurveEditor();
+  applyLUT();
+  if(notify) showSnack('Réinitialisé ✓');
+}
+
+// =====================================================
+// LUT GENERATION
+// =====================================================
+function generateLUTData() {
+  const p = params();
+  const curveLUTs = {
+    rgb:buildCurveLUT(curves.rgb),
+    r:buildCurveLUT(curves.r),
+    g:buildCurveLUT(curves.g),
+    b:buildCurveLUT(curves.b),
+  };
+  const size = lutSize;
+  const entries = [];
+
+  for(let bi=0;bi<size;bi++){
+    for(let gi=0;gi<size;gi++){
+      for(let ri=0;ri<size;ri++){
+        const rIn=Math.round(ri/(size-1)*255);
+        const gIn=Math.round(gi/(size-1)*255);
+        const bIn=Math.round(bi/(size-1)*255);
+        let [rOut,gOut,bOut]=transformPixel(rIn,gIn,bIn,p,curveLUTs);
+        // Blend with intensity
+        rOut=Math.round(rIn*(1-intensity)+rOut*intensity);
+        gOut=Math.round(gIn*(1-intensity)+gOut*intensity);
+        bOut=Math.round(bIn*(1-intensity)+bOut*intensity);
+        entries.push([rOut/255,gOut/255,bOut/255]);
+      }
+    }
+  }
+  return entries;
+}
+
+function generateCubeText() {
+  const entries = generateLUTData();
+  const size = lutSize;
+  let out = `# Generated by LUT Studio\n# Format: .cube\nLUT_3D_SIZE ${size}\n\n`;
+  entries.forEach(([r,g,b])=>{
+    out+=`${r.toFixed(6)} ${g.toFixed(6)} ${b.toFixed(6)}\n`;
+  });
+  return out;
+}
+
+function generate3DLText() {
+  const entries = generateLUTData();
+  const size = lutSize;
+  let out = `3DLUTSIZE ${size}\n\n`;
+  entries.forEach(([r,g,b])=>{
+    const ri=Math.round(r*4095);
+    const gi=Math.round(g*4095);
+    const bi=Math.round(b*4095);
+    out+=`${ri} ${gi} ${bi}\n`;
+  });
+  return out;
+}
+
+function generatePNGHald() {
+  // HALD LUT image (level N = N*N x N*N x N*N pixels)
+  const level = Math.ceil(Math.cbrt(lutSize));
+  const size = level*level*level;
+  const canvas = document.createElement('canvas');
+  canvas.width=size; canvas.height=size;
+  const ctx=canvas.getContext('2d');
+  const imgData=ctx.createImageData(size,size);
+  const d=imgData.data;
+  const entries=generateLUTData();
+  for(let i=0;i<entries.length&&i<size*size;i++){
+    d[i*4]=Math.round(entries[i][0]*255);
+    d[i*4+1]=Math.round(entries[i][1]*255);
+    d[i*4+2]=Math.round(entries[i][2]*255);
+    d[i*4+3]=255;
+  }
+  ctx.putImageData(imgData,0,0);
+  return canvas.toDataURL('image/png');
+}
+
+// =====================================================
+// EXPORT
+// =====================================================
+function exportLUT() {
+  const name = `LUT_Studio_${Date.now()}`;
+  if(exportFormat==='.cube') {
+    download(generateCubeText(), name+'.cube', 'text/plain');
+  } else if(exportFormat==='.3dl') {
+    download(generate3DLText(), name+'.3dl', 'text/plain');
+  } else {
+    const link=document.createElement('a');
+    link.href=generatePNGHald();
+    link.download=name+'_hald.png';
+    link.click();
+  }
+  showSnack(`LUT exportée en ${exportFormat} ✓`);
+}
+
+function copyLUTToClipboard() {
+  const text = exportFormat==='.3dl' ? generate3DLText() : generateCubeText();
+  navigator.clipboard.writeText(text).then(()=>showSnack('LUT copiée dans le presse-papiers ✓'));
+}
+
+function download(text, filename, type) {
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// =====================================================
+// SNACKBAR
+// =====================================================
+function showSnack(msg) {
+  const s=document.getElementById('snackbar');
+  s.textContent=msg;
+  s.classList.add('show');
+  setTimeout(()=>s.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
